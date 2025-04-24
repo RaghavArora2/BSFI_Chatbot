@@ -54,29 +54,40 @@ The **Streamlit**-based interface delivers a modern, responsive user experience:
 
 ### Local Installation
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/your-username/insurance-advisor-chatbot.git
-   cd insurance-advisor-chatbot
-   ```
+1. **Clone the repository**
 
-2. Run the setup script:
-   ```bash
-   python setup.py
-   ```
+```bash
+git clone https://github.com/RaghavArora2/BSFI_Chatbot.git
+```
 
-3. Activate the virtual environment:
-   - Windows: `.\venv\Scripts\activate`
+2. **Set up a virtual environment (recommended)**
 
-4. Add your Google API key in app.py file:
-   ```
-   GOOGLE_API_KEY=your_api_key_here
-   ```
+```bash
+# For Windows
+python -m venv venv
+venv\Scripts\activate
 
-5. Run the application:
-   ```bash
-   streamlit run app.py
-   ```
+```
+
+3. **Install dependencies**
+
+```bash
+pip install -r requirements.txt
+```
+
+4. **Set up environment variables**
+
+Edit API key in app.py:
+
+```
+GOOGLE_API_KEY=your_google_api_key_here
+```
+
+5. **Run the application**
+
+```bash
+streamlit run app.py
+`````
 
 ## 📖 Usage Guide
 
