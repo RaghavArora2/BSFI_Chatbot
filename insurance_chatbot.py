@@ -123,31 +123,27 @@ class InsuranceChatbot:
             result = self.chain({"question": query})
 
             logger.info(f"Got result: {result.keys()}")
-
-            # Get source documents for citation
+            
+            # Check if the answer indicates no information was found
+            answer = result['answer']
             source_docs = result.get('source_documents', [])
             
-            # Format source information if available
-            source_info = ""
-            if source_docs:
-                source_names = set()
-                for doc in source_docs:
-                    if 'source' in doc.metadata:
-                        source_name = doc.metadata['source'].split('/')[-1]
-                        source_names.add(source_name)
-                
-                if source_names:
-                    source_info = "\n\n*Information sourced from: " + ", ".join(source_names) + "*"
-
-            # Check if we need to escalate to a human agent
-            if self._should_escalate(query, result['answer']):
+            # If no relevant docs found or answer indicates information missing
+            if not source_docs or self._is_no_information_response(answer):
                 return (
-                    f"{result['answer']}\n\n"
-                    "For this specific query, it might be better to speak with one of our human insurance agents. "
-                    "Would you like me to arrange for someone to contact you?" + source_info
+                    "I don't have enough information to answer that question. Let me connect you with a customer "
+                    "support executive who can help you better with this specific inquiry."
                 )
 
-            return result['answer'] + source_info
+            # Check if we need to escalate to a human agent
+            if self._should_escalate(query, answer):
+                return (
+                    f"{answer}\n\n"
+                    "For this specific query, it might be better to speak with one of our human insurance agents. "
+                    "Would you like me to arrange for someone to contact you?"
+                )
+
+            return answer
 
         except Exception as e:
             # Detailed error logging for debugging
@@ -184,6 +180,41 @@ class InsuranceChatbot:
         query_lower = query.lower()
         return any(keyword in query_lower for keyword in insurance_keywords)
 
+    def _is_no_information_response(self, answer: str) -> bool:
+        """
+        Determine if the response indicates that no information was found.
+        
+        Args:
+            answer: The generated answer
+            
+        Returns:
+            Boolean indicating if the answer lacks information
+        """
+        # Phrases indicating lack of information
+        no_info_indicators = [
+            "I don't have enough information",
+            "I don't have information", 
+            "I cannot provide",
+            "I don't have specific",
+            "not included in",
+            "not mentioned in",
+            "not in the context",
+            "not available in",
+            "not specified in",
+            "not found in",
+            "I don't know",
+            "I'm not sure",
+            "cannot find",
+            "no information about",
+            "the provided context does not",
+            "no details about",
+            "cannot access",
+            "do not have access",
+            "not provided in"
+        ]
+        
+        return any(indicator.lower() in answer.lower() for indicator in no_info_indicators)
+
     def _should_escalate(self, query: str, answer: str) -> bool:
         """
         Determine if a query should be escalated to a human agent.
@@ -197,17 +228,16 @@ class InsuranceChatbot:
         """
         # Check for complex cases that might need human intervention
         complex_indicators = [
-            "I don't have enough information",
-            "I cannot provide",
             "would need more details",
             "cannot accurately",
             "specific to your situation",
             "recommend speaking with an agent",
             "cannot calculate",
             "varies depending on",
-            "I don't have specific information",
-            "I cannot access",
-            "not available in the provided context"
+            "specific information",
+            "not in my knowledge",
+            "outside the scope",
+            "detailed answer"
         ]
 
         # Check for specific complex topics

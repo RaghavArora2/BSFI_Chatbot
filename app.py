@@ -102,11 +102,17 @@ st.markdown("""
 .chat-container {
     background-color: white;
     border-radius: 20px;
-    box-shadow: 0 8px 30px rgba(0,0,0,0.06);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.08);
     padding: 20px;
     margin-bottom: 20px;
     position: relative;
     overflow: hidden;
+    transition: all 0.5s cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+
+.chat-container:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 50px rgba(65,105,225,0.15);
 }
 
 /* Add animated border effect */
@@ -118,19 +124,21 @@ st.markdown("""
     right: 0;
     bottom: 0;
     border-radius: 20px;
-    padding: 2px;
+    padding: 3px;
     background: linear-gradient(
-        45deg,
-        rgba(65,105,225,0.4),
-        rgba(0,191,255,0.4),
-        rgba(65,105,225,0.4)
+        135deg,
+        rgba(65,105,225,0.6),
+        rgba(0,191,255,0.6),
+        rgba(138,43,226,0.4),
+        rgba(65,105,225,0.6)
     );
+    background-size: 300% 300%;
     -webkit-mask: 
         linear-gradient(#fff 0 0) content-box, 
         linear-gradient(#fff 0 0);
     -webkit-mask-composite: destination-out;
     mask-composite: exclude;
-    animation: border-pulse 6s ease-in-out infinite;
+    animation: border-pulse 8s ease-in-out infinite;
     z-index: 0;
 }
 
@@ -146,7 +154,12 @@ st.markdown("""
     }
 }
 
-/* Button styling */
+/* Prevent UI glitches */
+div[data-testid="stDecoration"], div[data-testid="stToolbar"] {
+    z-index: 999;
+}
+
+/* Button styling with better animations */
 .stButton button {
     background-color: #4169E1;
     color: white;
@@ -154,60 +167,111 @@ st.markdown("""
     padding: 0.6rem 1.2rem;
     font-weight: 500;
     border: none;
-    transition: all 0.3s ease;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-.stButton button:hover {
-    background-color: #3151b5;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 4px 12px rgba(65,105,225,0.2);
+    position: relative;
+    overflow: hidden;
 }
 
-/* Input field styling */
+.stButton button::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255,255,255,0.2),
+        transparent
+    );
+    transition: all 0.4s ease;
+}
+
+.stButton button:hover {
+    background-color: #3151b5;
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 8px 15px rgba(65,105,225,0.3);
+}
+
+.stButton button:hover::after {
+    left: 100%;
+}
+
+.stButton button:active {
+    transform: translateY(1px) scale(0.98);
+    box-shadow: 0 2px 8px rgba(65,105,225,0.3);
+}
+
+/* Input field styling with enhanced animation */
 .stTextInput input {
     border-radius: 12px;
     border: 1px solid #e0e5eb;
-    padding: 1rem;
+    padding: 1.1rem;
     transition: all 0.3s ease;
     box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    background-color: #f9fafc;
 }
 
 .stTextInput input:focus {
     border-color: #4169E1;
-    box-shadow: 0 0 0 2px rgba(65,105,225,0.2);
+    box-shadow: 0 0 0 3px rgba(65,105,225,0.2);
+    background-color: #fff;
+    transform: translateY(-2px);
 }
 
-/* Message styling */
+/* Message styling with better animations */
 .user-message {
     background-color: #E9F0FF;
     border-radius: 15px;
-    padding: 12px 16px;
+    padding: 14px 18px;
     margin-bottom: 15px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    box-shadow: 0 3px 10px rgba(0,0,0,0.04);
     position: relative;
-    animation: fadeIn 0.3s ease-in-out;
+    animation: userMessageIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    border-bottom-right-radius: 4px;
 }
 
 .assistant-message {
     background-color: #FFFFFF;
     border-radius: 15px;
-    padding: 12px 16px;
+    padding: 14px 18px;
     margin-bottom: 15px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-    border-left: 3px solid #4169E1;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+    border-left: 4px solid #4169E1;
     position: relative;
-    animation: fadeIn 0.3s ease-in-out;
+    animation: assistantMessageIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    border-bottom-left-radius: 4px;
 }
 
-@keyframes fadeIn {
+@keyframes userMessageIn {
     from {
         opacity: 0;
-        transform: translateY(10px);
+        transform: translateY(20px) scale(0.9);
     }
     to {
         opacity: 1;
-        transform: translateY(0);
+        transform: translateY(0) scale(1);
     }
+}
+
+@keyframes assistantMessageIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Add message hover effect */
+.user-message:hover, .assistant-message:hover {
+    box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+    transform: translateY(-2px);
+    transition: all 0.3s ease;
 }
 
 /* Sidebar improvements */
@@ -217,7 +281,7 @@ st.markdown("""
     box-shadow: inset -1px 0 5px rgba(0,0,0,0.05);
 }
 
-/* Header styling */
+/* Header styling with animation */
 .main-header {
     text-align: center;
     color: #4169E1;
@@ -226,6 +290,16 @@ st.markdown("""
     margin-bottom: 1.5rem;
     position: relative;
     display: inline-block;
+    animation: headerPulse 2s ease-in-out infinite alternate;
+}
+
+@keyframes headerPulse {
+    from {
+        text-shadow: 0 0 5px rgba(65, 105, 225, 0);
+    }
+    to {
+        text-shadow: 0 0 12px rgba(65, 105, 225, 0.4);
+    }
 }
 
 .main-header::after {
@@ -237,31 +311,81 @@ st.markdown("""
     left: 20%;
     bottom: -10px;
     border-radius: 2px;
+    animation: headerBorderPulse 3s ease-in-out infinite;
 }
 
-/* FAQ button styling */
-.faq-btn {
-    border-radius: 8px;
-    background-color: #f8f9fa;
-    border: 1px solid #e0e5eb;
-    padding: 12px;
-    transition: all 0.3s ease;
+@keyframes headerBorderPulse {
+    0% {
+        opacity: 0.6;
+        width: 40%;
+        left: 30%;
+    }
+    50% {
+        opacity: 1;
+        width: 70%;
+        left: 15%;
+    }
+    100% {
+        opacity: 0.6;
+        width: 40%;
+        left: 30%;
+    }
+}
+
+/* FAQ button styling with better hover effect */
+.stButton button[data-testid^="stWidgetButton"] {
+    background-color: #f8f9fa !important;
+    color: #2C3E50 !important;
+    border: 1px solid #e0e5eb !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05) !important;
     margin-bottom: 8px;
     text-align: left;
-    cursor: pointer;
-    font-weight: 500;
+    transition: all 0.3s ease;
 }
 
-.faq-btn:hover {
-    background-color: #EFF3FF;
+.stButton button[data-testid^="stWidgetButton"]:hover {
+    background-color: #EFF3FF !important;
+    color: #4169E1 !important;
+    border-color: #4169E1 !important;
     transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+    box-shadow: 0 4px 8px rgba(65,105,225,0.15) !important;
+}
+
+/* Remove focus outlines */
+button:focus, button:active {
+    outline: none !important;
+    box-shadow: none !important;
 }
 
 /* Upload button styling */
 .upload-btn-container {
     margin-top: 20px;
     margin-bottom: 20px;
+}
+
+/* Loading animation improvement */
+.stSpinner {
+    border-width: 3px !important;
+    animation: spinner-border 0.75s linear infinite !important;
+}
+
+/* Smooth scroll behavior */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Fade in animation for page load */
+@keyframes fadeInPage {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.main {
+    animation: fadeInPage 0.8s ease-in-out;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -350,6 +474,7 @@ st.markdown("</div>", unsafe_allow_html=True)  # Close the chat container
 def submit():
     if "temp_input" in st.session_state and st.session_state.temp_input:
         user_message = st.session_state.temp_input
+        temp_value = st.session_state.temp_input
         
         if st.session_state.chatbot is None:
             st.error(
@@ -373,13 +498,22 @@ def submit():
                     "content": response
                 })
             except Exception as e:
+                # Log the error for debugging
+                import traceback
+                print(f"Error in submit: {str(e)}")
+                print(traceback.format_exc())
+                
+                # Add a more user-friendly error message
                 st.session_state.chat_history.append({
                     "role": "assistant",
-                    "content": f"I'm having trouble answering that. Error: {str(e)}"
+                    "content": "I apologize, but I'm having trouble processing your question. Let me connect you with a customer support executive who can help you better."
                 })
         
-        # Clear the input for next message
-        st.session_state.temp_input = ""
+        # Use a placeholder to store the input temporarily and clear on rerun
+        if "clear_input" not in st.session_state:
+            st.session_state.clear_input = True
+        
+        st.rerun()
 
 
 # Function to process FAQ questions
@@ -402,9 +536,15 @@ def process_faq(question):
                 "content": response
             })
         except Exception as e:
+            # Log the error for debugging
+            import traceback
+            print(f"Error in process_faq: {str(e)}")
+            print(traceback.format_exc())
+            
+            # Add a more user-friendly error message
             st.session_state.chat_history.append({
                 "role": "assistant",
-                "content": f"I'm having trouble answering that. Error: {str(e)}"
+                "content": "I apologize, but I'm having trouble processing your question. Let me connect you with a customer support executive who can help you better."
             })
     
     st.rerun()
