@@ -481,12 +481,17 @@ st.markdown("</div>", unsafe_allow_html=True)  # Close the chat container
 # Function to handle user message submission
 def submit():
     if "temp_input" in st.session_state and st.session_state.temp_input:
+        # Save user message and clear input
         user_message = st.session_state.temp_input
-        temp_value = st.session_state.temp_input
+        
+        # Clear the input before processing to prevent duplicates
+        temp_value = user_message  # Save a copy
+        st.session_state.temp_input = ""  # Clear input field
         
         if st.session_state.chatbot is None:
             st.error(
                 "Chatbot is not initialized. Please check the error above.")
+            st.session_state.is_sending = False
             return
         
         # Add user message to chat history
@@ -517,17 +522,26 @@ def submit():
                     "content": "I apologize, but I'm having trouble processing your question. Let me connect you with a customer support executive who can help you better."
                 })
         
-        # Use a placeholder to store the input temporarily and clear on rerun
-        if "clear_input" not in st.session_state:
-            st.session_state.clear_input = True
+        # Reset sending flag and maintain position
+        st.session_state.is_sending = False
+        st.session_state.maintain_position = True
         
+        # Rerun to refresh the interface
         st.rerun()
 
 
 # Function to process FAQ questions
 def process_faq(question):
+    # Prevent double processing
+    if "is_sending" in st.session_state and st.session_state.is_sending:
+        return
+    
+    # Set sending flag
+    st.session_state.is_sending = True
+    
     if st.session_state.chatbot is None:
         st.error("Chatbot is not initialized. Please check the error above.")
+        st.session_state.is_sending = False
         return
     
     # Add user message to chat history
@@ -555,29 +569,79 @@ def process_faq(question):
                 "content": "I apologize, but I'm having trouble processing your question. Let me connect you with a customer support executive who can help you better."
             })
     
+    # Reset sending flag and set position flag
+    st.session_state.is_sending = False
+    st.session_state.maintain_position = True
+    
+    # Rerun to update UI
     st.rerun()
 
 
-# Modern chat input area
+# Auto-scroll JavaScript for maintaining position
+st.markdown("""
+<script>
+    // Function to check and scroll to maintain position
+    function checkAndScroll() {
+        const maintainPosition = document.getElementById('maintain_position');
+        if (maintainPosition) {
+            maintainPosition.scrollIntoView({behavior: 'auto'});
+        }
+    }
+    
+    // Execute on load and after each Streamlit update
+    document.addEventListener('DOMContentLoaded', checkAndScroll);
+    if (window.parent.document.addEventListener) {
+        window.parent.document.addEventListener('DOMContentLoaded', function() {
+            window.setTimeout(checkAndScroll, 100);
+        });
+    }
+</script>
+""", unsafe_allow_html=True)
+
+# Check if we need to rerun based on feedback
+if "displayed_messages" in st.session_state:
+    need_rerun = display_chat_history(st.session_state.chat_history)
+    if need_rerun:
+        st.rerun()
+else:
+    display_chat_history(st.session_state.chat_history)
+
+# Modern chat input area with double-send prevention
 with st.container():
-    # Initialize temp_input if it doesn't exist
+    # Initialize temp_input and prevent double-send
     if "temp_input" not in st.session_state:
         st.session_state.temp_input = ""
+    if "is_sending" not in st.session_state:
+        st.session_state.is_sending = False
+    
+    # Handle text input with separate callback to prevent double-send
+    def on_input_change():
+        if st.session_state.temp_input and not st.session_state.is_sending:
+            st.session_state.is_sending = True  # Set sending flag
+            submit()
     
     # Text input with improved styling
     st.text_input("Type your insurance question here...",
                   key="temp_input",
-                  on_change=submit,
+                  on_change=on_input_change,
                   placeholder="Example: What does auto insurance typically cover?")
     
     col1, col2 = st.columns([5, 1])
     with col1:
-        if st.button("Send", use_container_width=True):
-            submit()
+        # Send button with double-send prevention
+        send_disabled = st.session_state.is_sending
+        if st.button("Send", use_container_width=True, disabled=send_disabled):
+            if not st.session_state.is_sending and st.session_state.temp_input:
+                st.session_state.is_sending = True
+                submit()
     
     with col2:
         if st.button("Clear", use_container_width=True):
             st.session_state.chat_history = []
+            st.session_state.displayed_messages = set()
+            if "feedback_given" in st.session_state:
+                st.session_state.feedback_given = set()
+            st.session_state.is_sending = False
             st.rerun()
     
     # FAQ section with improved design

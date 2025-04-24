@@ -11,13 +11,37 @@ def display_chat_history(chat_history: List[Dict[str, Any]]):
     if not chat_history:
         return
     
+    # Display any pending feedback messages
+    if "feedback_message" in st.session_state:
+        msg = st.session_state.feedback_message
+        if msg["type"] == "success":
+            st.success(msg["text"])
+        else:
+            st.info(msg["text"])
+        # Clear the message after displaying
+        st.session_state.feedback_message = None
+    
     # Create containers for chat messages
     chat_container = st.container()
+    
+    # Initialize displayed_messages if not exists
+    if "displayed_messages" not in st.session_state:
+        st.session_state.displayed_messages = set()
+    
+    # Add anchor for scroll position
+    if "maintain_position" in st.session_state and st.session_state.maintain_position:
+        st.markdown('<div id="maintain_position"></div>', unsafe_allow_html=True)
+        # Reset flag
+        st.session_state.maintain_position = False
     
     with chat_container:
         for idx, message in enumerate(chat_history):
             role = message["role"]
             content = message["content"]
+            
+            # Fix for "explain in detail" responses
+            if content.lower().strip() == "explain in detail":
+                content = "Please explain this in more detail."
             
             if role == "user":
                 with st.chat_message("user", avatar="👤"):
@@ -26,36 +50,36 @@ def display_chat_history(chat_history: List[Dict[str, Any]]):
             elif role == "assistant":
                 # Check if this is the newest message and hasn't been displayed with typing effect
                 is_new_message = (idx == len(chat_history) - 1 and 
-                                role == "assistant" and 
-                                "displayed_messages" in st.session_state and
-                                idx not in st.session_state.displayed_messages)
+                                 role == "assistant" and 
+                                 idx not in st.session_state.displayed_messages)
                 
                 with st.chat_message("assistant", avatar="🤖"):
                     # Apply typing effect for new assistant messages
                     if is_new_message:
                         typing_placeholder = st.empty()
                         displayed_text = ""
-                        for i in range(len(content) + 1):
-                            displayed_text = content[:i]
+                        typing_speed = 0.01  # Base typing speed
+                        
+                        # Adjust typing speed based on content length
+                        if len(content) > 500:
+                            typing_speed = 0.0005  # Very fast for long messages
+                        elif len(content) > 200:
+                            typing_speed = 0.002   # Fast for medium messages
+                        
+                        # Process content in chunks for improved performance
+                        chunk_size = 5  # Characters per chunk
+                        for i in range(0, len(content) + chunk_size, chunk_size):
+                            end_pos = min(i, len(content))
+                            displayed_text = content[:end_pos]
                             typing_placeholder.markdown(
                                 f"""<div class="assistant-message typing-effect">{displayed_text}</div>""", 
                                 unsafe_allow_html=True
                             )
-                            if i < len(content):
-                                # Speed up typing for longer messages
-                                if len(content) > 500:
-                                    import time
-                                    time.sleep(0.001)  # Very fast for long messages
-                                elif len(content) > 200:
-                                    import time
-                                    time.sleep(0.005)  # Fast for medium messages
-                                else:
-                                    import time
-                                    time.sleep(0.01)   # Normal speed for short messages
+                            if end_pos < len(content):
+                                import time
+                                time.sleep(typing_speed)
                         
-                        # Add to displayed messages
-                        if "displayed_messages" not in st.session_state:
-                            st.session_state.displayed_messages = set()
+                        # Mark as displayed
                         st.session_state.displayed_messages.add(idx)
                     else:
                         # Regular display for already shown messages
@@ -63,18 +87,25 @@ def display_chat_history(chat_history: List[Dict[str, Any]]):
                     
                     # Add feedback buttons for assistant messages
                     # Only add buttons for messages that haven't received feedback
-                    if "feedback_given" in st.session_state and idx not in st.session_state.feedback_given:
+                    if "feedback_given" not in st.session_state:
+                        st.session_state.feedback_given = set()
+                        
+                    if idx not in st.session_state.feedback_given:
                         feedback_container = st.container()
                         with feedback_container:
                             col1, col2, col3 = st.columns([1, 1, 10])
                             with col1:
                                 if st.button("👍", key=f"thumbs_up_{idx}"):
                                     give_feedback(idx, "positive")
+                                    return True  # Signal to app.py to rerun
                             with col2:
                                 if st.button("👎", key=f"thumbs_down_{idx}"):
                                     give_feedback(idx, "negative")
+                                    return True  # Signal to app.py to rerun
                             with col3:
                                 st.markdown("<span style='color:#777; font-size:0.8rem;'>Was this response helpful?</span>", unsafe_allow_html=True)
+    
+    return False  # No rerun needed
 
 def give_feedback(msg_idx, feedback_type):
     """
@@ -91,18 +122,18 @@ def give_feedback(msg_idx, feedback_type):
         # Add to the set of messages that have received feedback
         st.session_state.feedback_given.add(msg_idx)
         
-        # Display thank you message
+        # Store feedback message to display after rerun
         if feedback_type == "positive":
-            st.success("Thank you for your feedback! We're glad this response was helpful.")
+            st.session_state.feedback_message = {"type": "success", "text": "Thank you for your feedback! We're glad this response was helpful."}
         else:
-            st.info("Thank you for your feedback. We'll work to improve our responses.")
+            st.session_state.feedback_message = {"type": "info", "text": "Thank you for your feedback. We'll work to improve our responses."}
         
         # Here you could implement additional logic to:
         # 1. Store feedback in a database
         # 2. Use feedback to improve the model
         # 3. Change responses based on negative feedback
         
-        # Show feedback confirmation and add slight delay for visual feedback
-        import time
-        time.sleep(0.5)  # Short delay for visual confirmation
-        st.rerun()  # Rerun to update the UI
+        # Set flag to maintain scroll position
+        st.session_state.maintain_position = True
+        
+        # Don't call st.rerun() here - it will be handled in app.py
