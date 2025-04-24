@@ -340,7 +340,7 @@ div[data-testid="stDecoration"], div[data-testid="stToolbar"] {
     box-shadow: 0 2px 5px rgba(0,0,0,0.05) !important;
     margin-bottom: 8px;
     text-align: left;
-    transition: all 0.3s ease;
+    transition: all 0.15s ease;
 }
 
 .stButton button[data-testid^="stWidgetButton"]:hover {
@@ -349,6 +349,14 @@ div[data-testid="stDecoration"], div[data-testid="stToolbar"] {
     border-color: #4169E1 !important;
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(65,105,225,0.15) !important;
+}
+
+.stButton button[data-testid^="stWidgetButton"]:active {
+    background-color: #4169E1 !important;
+    color: white !important;
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(65,105,225,0.2) !important;
+    transition: all 0.05s ease-out;
 }
 
 /* Remove focus outlines */

@@ -131,8 +131,8 @@ class InsuranceChatbot:
             # If no relevant docs found or answer indicates information missing
             if not source_docs or self._is_no_information_response(answer):
                 return (
-                    "I don't have enough information to answer that question. Let me connect you with a customer "
-                    "support executive who can help you better with this specific inquiry."
+                    "I don't have enough information to answer that question completely. "
+                    "Would you like me to connect you with a customer support executive who can provide you with more detailed information?"
                 )
 
             # Check if we need to escalate to a human agent
