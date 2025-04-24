@@ -5,30 +5,26 @@ from insurance_chatbot import InsuranceChatbot
 from knowledge_base import create_knowledge_base
 from utils import display_chat_history, give_feedback
 
-# Set the Google API key
 os.environ["GOOGLE_API_KEY"] = "AIzaSyAQW3JngAxn3DqbZQWzvIT3kb2w098qI9c"
 
-# Page configuration with improved layout
 st.set_page_config(page_title="Insurance Advisor Chatbot",
                    page_icon="🛡️",
                    layout="wide",
-                   initial_sidebar_state="collapsed")  # Start with collapsed sidebar
+                   initial_sidebar_state="collapsed") 
 
-# Initialize session state variables
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 if "documents" not in st.session_state:
-    st.session_state.documents = {}  # Dictionary to store uploaded documents
+    st.session_state.documents = {} 
 if "active_document" not in st.session_state:
     st.session_state.active_document = None
 if "chatbot" not in st.session_state:
     st.session_state.chatbot = None
 if "feedback_given" not in st.session_state:
-    st.session_state.feedback_given = set()  # To track which messages have received feedback
+    st.session_state.feedback_given = set() 
 if "show_document_upload" not in st.session_state:
-    st.session_state.show_document_upload = False  # Flag to control document upload visibility
+    st.session_state.show_document_upload = False 
 
-# Check for Google API key
 api_key = os.getenv("GOOGLE_API_KEY")
 if not api_key:
     st.error(
@@ -39,7 +35,6 @@ if not api_key:
     )
 else:
     try:
-        # Initialize knowledge base with default documents if no custom documents are uploaded
         if not st.session_state.documents and st.session_state.chatbot is None:
             kb = create_knowledge_base()
             st.session_state.chatbot = InsuranceChatbot(kb)
@@ -50,45 +45,33 @@ else:
         st.error(f"Error initializing chatbot: {str(e)}")
 
 
-# Function to handle document upload
 def handle_document_upload():
     uploaded_file = st.file_uploader(
         "Upload insurance policy document (PDF)", type="pdf")
 
     if uploaded_file is not None:
-        # Create a temporary file
         with tempfile.NamedTemporaryFile(delete=False,
                                          suffix='.pdf') as tmp_file:
-            # Write the uploaded file content to the temporary file
             tmp_file.write(uploaded_file.getvalue())
             tmp_path = tmp_file.name
 
         try:
-            # Create knowledge base from the uploaded document
             kb = create_knowledge_base(custom_pdf_path=tmp_path)
             document_name = uploaded_file.name
-
-            # Add to documents dictionary
             st.session_state.documents[document_name] = tmp_path
             st.session_state.active_document = document_name
-
-            # Initialize chatbot with new knowledge base
             st.session_state.chatbot = InsuranceChatbot(kb)
 
             st.success(
                 f"Successfully uploaded and processed {document_name}")
-            # Clean the chat history when changing documents
             st.session_state.chat_history = []
 
         except Exception as e:
             st.error(f"Error processing the uploaded document: {str(e)}")
         finally:
-            # Clean up the temporary file
             import os
             os.unlink(tmp_path)
 
-
-# Apply custom styles for a modern UI with animated borders
 st.markdown("""
 <style>
 /* Global Improvements */
@@ -398,24 +381,19 @@ html {
 </style>
 """, unsafe_allow_html=True)
 
-# App header with improved styling
 st.markdown(
     "<h1 class='main-header'>🛡️ Insurance Advisor Chatbot</h1>",
     unsafe_allow_html=True)
 
-# Sidebar for document management
 with st.sidebar:
     st.header("Document Management")
     
-    # Toggle for showing/hiding document upload
     if st.button("Upload Insurance Policy Document", key="toggle_upload"):
         st.session_state.show_document_upload = not st.session_state.show_document_upload
     
-    # Only show document upload if toggled on
     if st.session_state.show_document_upload:
         handle_document_upload()
     
-    # Document switcher (only show if documents are available)
     if st.session_state.documents and len(st.session_state.documents) > 1:
         st.subheader("Switch Document")
         selected_document = st.selectbox(
@@ -427,36 +405,25 @@ with st.sidebar:
         
         if selected_document != st.session_state.active_document:
             if st.session_state.documents[selected_document] == "Default":
-                # Use default knowledge base
                 kb = create_knowledge_base()
             else:
-                # Create knowledge base from the custom document
                 kb = create_knowledge_base(custom_pdf_path=st.session_state.
                                            documents[selected_document])
             
-            # Initialize chatbot with the selected knowledge base
             st.session_state.chatbot = InsuranceChatbot(kb)
             st.session_state.active_document = selected_document
-            st.session_state.chat_history = []  # Reset chat history when switching documents
+            st.session_state.chat_history = [] 
             st.rerun()
     
-    # About section
     st.markdown("---")
     st.markdown("""
     ### About this Chatbot
     
-    This AI assistant helps you understand insurance policies by providing accurate information from insurance documents. The chatbot uses Google's Gemini model and LangChain to process and retrieve relevant information.
-    
-    **Features:**
-    - Answers questions about insurance policies
-    - References actual insurance policy documents
-    - Suggests human assistance when needed
+    This AI assistant helps you understand insurance policies by providing accurate information from insurance documents.
     """)
 
-# Main chat container
 st.markdown("<div class='chat-container'>", unsafe_allow_html=True)
 
-# Welcome message when no chat history
 if not st.session_state.chat_history:
     st.markdown("""
     ### Welcome to the Insurance Assistant!
@@ -472,13 +439,10 @@ if not st.session_state.chat_history:
     Ask me any insurance-related question to get started!
     """)
 
-# Display chat history with feedback buttons
 display_chat_history(st.session_state.chat_history)
 
-st.markdown("</div>", unsafe_allow_html=True)  # Close the chat container
+st.markdown("</div>", unsafe_allow_html=True) 
 
-
-# Function to handle user message submission
 def submit():
     if "temp_input" in st.session_state and st.session_state.temp_input:
         user_message = st.session_state.temp_input
@@ -489,7 +453,6 @@ def submit():
                 "Chatbot is not initialized. Please check the error above.")
             return
         
-        # Add user message to chat history
         st.session_state.chat_history.append({
             "role": "user",
             "content": user_message
@@ -497,59 +460,47 @@ def submit():
         
         with st.spinner("Thinking..."):
             try:
-                # Get response from chatbot
                 response = st.session_state.chatbot.get_response(user_message)
                 
-                # Add assistant message to chat history
                 st.session_state.chat_history.append({
                     "role": "assistant",
                     "content": response
                 })
             except Exception as e:
-                # Log the error for debugging
                 import traceback
                 print(f"Error in submit: {str(e)}")
                 print(traceback.format_exc())
                 
-                # Add a more user-friendly error message
                 st.session_state.chat_history.append({
                     "role": "assistant",
                     "content": "I apologize, but I'm having trouble processing your question. Let me connect you with a customer support executive who can help you better."
                 })
         
-        # Use a placeholder to store the input temporarily and clear on rerun
         if "clear_input" not in st.session_state:
             st.session_state.clear_input = True
         
         st.rerun()
 
-
-# Function to process FAQ questions
 def process_faq(question):
     if st.session_state.chatbot is None:
         st.error("Chatbot is not initialized. Please check the error above.")
         return
     
-    # Add user message to chat history
     st.session_state.chat_history.append({"role": "user", "content": question})
     
     with st.spinner("Thinking..."):
         try:
-            # Get response from chatbot
             response = st.session_state.chatbot.get_response(question)
             
-            # Add assistant message to chat history
             st.session_state.chat_history.append({
                 "role": "assistant",
                 "content": response
             })
         except Exception as e:
-            # Log the error for debugging
             import traceback
             print(f"Error in process_faq: {str(e)}")
             print(traceback.format_exc())
             
-            # Add a more user-friendly error message
             st.session_state.chat_history.append({
                 "role": "assistant",
                 "content": "I apologize, but I'm having trouble processing your question. Let me connect you with a customer support executive who can help you better."
@@ -558,13 +509,10 @@ def process_faq(question):
     st.rerun()
 
 
-# Modern chat input area
 with st.container():
-    # Initialize temp_input if it doesn't exist
     if "temp_input" not in st.session_state:
         st.session_state.temp_input = ""
     
-    # Text input with improved styling
     st.text_input("Type your insurance question here...",
                   key="temp_input",
                   on_change=submit,
@@ -580,7 +528,6 @@ with st.container():
             st.session_state.chat_history = []
             st.rerun()
     
-    # FAQ section with improved design
     st.markdown("### Quick Questions")
     faq_questions = [
         "What are the eligibility criteria for life insurance?",
@@ -591,7 +538,7 @@ with st.container():
         "How much coverage do I need for my car insurance?"
     ]
     
-    # Display FAQ questions with better styling
+
     col1, col2 = st.columns(2)
     
     for i, question in enumerate(faq_questions):
@@ -604,7 +551,6 @@ with st.container():
                 if st.button(question, key=f"faq_{i}"):
                     process_faq(question)
 
-# Footer
 st.markdown("---")
 st.markdown(
     "*This chatbot uses AI to provide information about insurance policies based on our knowledge base. For complex inquiries or specific policy details, please contact our customer service.*"

@@ -10,7 +10,6 @@ import io
 import re
 import os
 
-# Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
@@ -27,48 +26,38 @@ def create_knowledge_base(custom_pdf_path=None, custom_text=None):
     """
     documents = []
     
-    # Use Google Generative AI for embeddings
     api_key = os.getenv("GOOGLE_API_KEY")
     if not api_key:
         raise ValueError("Google API key not found. Please set the GOOGLE_API_KEY environment variable.")
     
     embeddings = GoogleGenerativeAIEmbeddings(
-        model="models/embedding-001",  # Use a suitable embedding model
+        model="models/embedding-001",
         google_api_key=api_key,
     )
     
-    # Case 1: Use custom PDF if provided
     if custom_pdf_path:
         logger.info(f"Loading custom PDF from {custom_pdf_path}")
         loader = PyPDFLoader(custom_pdf_path)
         documents.extend(loader.load())
     
-    # Case 2: Use custom text if provided
     elif custom_text:
         logger.info("Using custom text for knowledge base")
-        # Create a temporary file to store the custom text
         with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".txt") as temp_file:
             temp_file.write(custom_text)
             temp_path = temp_file.name
         
-        # Load the temporary text file
         loader = TextLoader(temp_path)
         documents.extend(loader.load())
         
-        # Clean up temporary file
         os.unlink(temp_path)
     
-    # Case 3: Use default sample insurance policy files (create them if needed)
     else:
         logger.info("Using default insurance policy documents")
-        # Check if sample directory exists, if not create it
         sample_dir = "sample_insurance_policies"
         if not os.path.exists(sample_dir):
             os.makedirs(sample_dir)
-            # Create sample files
             create_sample_insurance_files(sample_dir)
         
-        # Check for existing text files in attached_assets
         attached_dir = "attached_assets"
         if os.path.exists(attached_dir):
             for filename in os.listdir(attached_dir):
@@ -78,7 +67,6 @@ def create_knowledge_base(custom_pdf_path=None, custom_text=None):
                     documents.extend(loader.load())
                     logger.info(f"Loaded text file from {file_path}")
         
-        # Load sample insurance policy files
         for policy_type in ["auto", "health", "home", "life"]:
             pdf_path = os.path.join(sample_dir, f"{policy_type}_insurance.pdf")
             if os.path.exists(pdf_path):
@@ -86,7 +74,6 @@ def create_knowledge_base(custom_pdf_path=None, custom_text=None):
                 documents.extend(loader.load())
                 logger.info(f"Loaded sample file from {pdf_path}")
     
-    # If no documents are loaded, create a fallback document
     if not documents:
         logger.warning("No documents loaded, creating fallback document")
         fallback_text = create_fallback_document()
@@ -97,10 +84,8 @@ def create_knowledge_base(custom_pdf_path=None, custom_text=None):
         loader = TextLoader(temp_path)
         documents.extend(loader.load())
         
-        # Clean up temporary file
         os.unlink(temp_path)
     
-    # Split documents into chunks
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=1000,
         chunk_overlap=200,
@@ -110,7 +95,6 @@ def create_knowledge_base(custom_pdf_path=None, custom_text=None):
     chunks = text_splitter.split_documents(documents)
     logger.info(f"Created knowledge base with {len(chunks)} chunks")
     
-    # Create and return vector store
     vector_store = FAISS.from_documents(chunks, embeddings)
     return vector_store
 
@@ -123,7 +107,6 @@ def create_sample_insurance_files(directory_path):
         import reportlab.pdfgen.canvas
         from reportlab.lib.pagesizes import letter
 
-        # Sample content for different insurance policies
         insurance_data = {
             "auto_insurance": """
             AUTO INSURANCE POLICY
@@ -253,16 +236,13 @@ def create_sample_insurance_files(directory_path):
             """
         }
 
-        # Create PDF files for each type of insurance
         for name, content in insurance_data.items():
             pdf_path = os.path.join(directory_path, f"{name}.pdf")
             canvas = reportlab.pdfgen.canvas.Canvas(pdf_path, pagesize=letter)
             
-            # Format and add content to PDF
             text_object = canvas.beginText(50, 750)
             text_object.setFont("Helvetica", 10)
             
-            # Clean up content and split into lines
             cleaned_content = content.strip()
             lines = cleaned_content.split('\n')
             
@@ -276,7 +256,6 @@ def create_sample_insurance_files(directory_path):
 
     except Exception as e:
         logger.error(f"Error creating sample insurance files: {str(e)}")
-        # If PDF creation fails, create text files instead
         try:
             for name, content in insurance_data.items():
                 txt_path = os.path.join(directory_path, f"{name}.txt")
@@ -314,7 +293,6 @@ def create_fallback_document():
     Death benefits are generally tax-free to beneficiaries.
     """
 
-# Additional function to convert Document objects to the format needed for the chatbot
 from langchain_core.documents import Document
 
 def document_to_dict(doc):

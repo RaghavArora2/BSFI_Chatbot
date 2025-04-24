@@ -7,7 +7,6 @@ from langchain.prompts import PromptTemplate
 from langchain.memory import ConversationBufferMemory
 import logging
 
-# Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
@@ -25,19 +24,15 @@ class InsuranceChatbot:
         if not self.api_key:
             raise ValueError("Google API key not found. Please set the GOOGLE_API_KEY environment variable.")
 
-        # Initialize the Gemini chat model
         try:
-            # Configure Gemini API
             genai.configure(api_key=self.api_key)
 
-            # Get available models to debug
             models = genai.list_models()
             logger.info(f"Available Gemini models: {[model.name for model in models]}")
 
-            # Use a specific model (using the latest available)
             self.llm = ChatGoogleGenerativeAI(
-                model="gemini-1.5-flash-latest",  # Use a modern model
-                temperature=0.2,  # Lower temperature for more factual responses
+                model="gemini-1.5-flash-latest", 
+                temperature=0.2,
                 google_api_key=self.api_key,
                 convert_system_message_to_human=True
             )
@@ -45,7 +40,6 @@ class InsuranceChatbot:
             logger.error(f"Error initializing Gemini model: {str(e)}")
             raise
 
-        # Set up conversation memory
         self.memory = ConversationBufferMemory(
             memory_key="chat_history",
             return_messages=True,
@@ -53,7 +47,6 @@ class InsuranceChatbot:
             output_key="answer"
         )
 
-        # Create the system prompt template
         system_template = """
         You are InsuranceGPT, an expert insurance advisor chatbot designed to provide accurate, helpful, and professional insurance information. 
         
@@ -85,18 +78,17 @@ class InsuranceChatbot:
             input_variables=["context", "question", "chat_history"]
         )
 
-        # Set up the conversational retrieval chain
         self.chain = ConversationalRetrievalChain.from_llm(
             llm=self.llm,
             retriever=self.knowledge_base.as_retriever(
-                search_kwargs={"k": 4},  # Retrieve 4 most relevant chunks
-                search_type="similarity"  # Use similarity search
+                search_kwargs={"k": 4},
+                search_type="similarity" 
             ),
             memory=self.memory,
             combine_docs_chain_kwargs={"prompt": QA_PROMPT},
             return_source_documents=True,
             verbose=True,
-            output_key="answer"  # Specify which output key to store in memory
+            output_key="answer"  
         )
 
     def get_response(self, query: str) -> str:
@@ -110,7 +102,6 @@ class InsuranceChatbot:
             A response string with information about the insurance query
         """
         try:
-            # Check if the query is about insurance
             if not self._is_insurance_related(query):
                 return (
                     "I'm an insurance specialist and can only answer questions related to insurance policies, "
@@ -119,23 +110,19 @@ class InsuranceChatbot:
 
             logger.info(f"Processing query: {query}")
 
-            # Get response from the conversation chain
             result = self.chain({"question": query})
 
             logger.info(f"Got result: {result.keys()}")
             
-            # Check if the answer indicates no information was found
             answer = result['answer']
             source_docs = result.get('source_documents', [])
             
-            # If no relevant docs found or answer indicates information missing
             if not source_docs or self._is_no_information_response(answer):
                 return (
                     "I don't have enough information to answer that question completely. "
                     "Would you like me to connect you with a customer support executive who can provide you with more detailed information?"
                 )
 
-            # Check if we need to escalate to a human agent
             if self._should_escalate(query, answer):
                 return (
                     f"{answer}\n\n"
@@ -146,12 +133,10 @@ class InsuranceChatbot:
             return answer
 
         except Exception as e:
-            # Detailed error logging for debugging
             logger.error(f"Error in get_response: {type(e).__name__}: {str(e)}")
             import traceback
             logger.error(traceback.format_exc())
 
-            # Fallback error handling with more specific information
             return (
                 f"I'm having trouble processing your request at the moment. "
                 f"This could be due to technical difficulties or the complexity of your query. "
@@ -190,7 +175,6 @@ class InsuranceChatbot:
         Returns:
             Boolean indicating if the answer lacks information
         """
-        # Phrases indicating lack of information
         no_info_indicators = [
             "I don't have enough information",
             "I don't have information", 
@@ -226,7 +210,6 @@ class InsuranceChatbot:
         Returns:
             Boolean indicating if the query should be escalated
         """
-        # Check for complex cases that might need human intervention
         complex_indicators = [
             "would need more details",
             "cannot accurately",
@@ -240,7 +223,6 @@ class InsuranceChatbot:
             "detailed answer"
         ]
 
-        # Check for specific complex topics
         complex_topics = [
             "lawsuit", "legal", "sue", "death", "dispute", "rejected claim",
             "denied", "appeal", "fraud", "investigation", "cancelation",
@@ -248,7 +230,6 @@ class InsuranceChatbot:
             "personal information", "policy number", "payment information"
         ]
 
-        # If the answer indicates uncertainty or the query is about complex topics
         query_lower = query.lower()
         return (
             any(indicator.lower() in answer.lower() for indicator in complex_indicators) or
