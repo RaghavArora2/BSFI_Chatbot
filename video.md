@@ -212,21 +212,6 @@ Advanced model parameters can be adjusted in `insurance_chatbot.py`:
 - Try a different browser
 - Restart the application
 
-#### "StreamlitDuplicateElementKey Error"
-- This rarely happens but can occur after multiple quick interactions
-- Simply refresh the page to reset unique element keys
-- Avoid rapidly clicking multiple buttons in succession
-
-#### "Double message sending"
-- The application has built-in protection against double-sending
-- If it still occurs, wait a moment before clicking buttons
-- Check network connectivity, as slow connections may trigger resubmissions
-
-#### "Feedback message issues"
-- Feedback acknowledgments should appear at the top of the interface
-- If missing, try providing feedback again
-- In rare cases, clear your browser cache or try a different browser
-
 ### Debug Mode
 
 For detailed logging and troubleshooting:
