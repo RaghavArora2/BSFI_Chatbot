@@ -5,6 +5,11 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.chains import ConversationalRetrievalChain
 from langchain.prompts import PromptTemplate
 from langchain.memory import ConversationBufferMemory
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 class InsuranceChatbot:
     def __init__(self, knowledge_base):
@@ -27,16 +32,17 @@ class InsuranceChatbot:
 
             # Get available models to debug
             models = genai.list_models()
-            print("Available Gemini models:", [model.name for model in models])
+            logger.info(f"Available Gemini models: {[model.name for model in models]}")
 
-            # Use a specific model to avoid compatibility issues
+            # Use a specific model (using the latest available)
             self.llm = ChatGoogleGenerativeAI(
-                model="gemini-1.5-flash-latest", # Use the correct model name
-                temperature=0.3,
-                google_api_key=self.api_key
+                model="gemini-1.5-flash-latest",  # Use a modern model
+                temperature=0.2,  # Lower temperature for more factual responses
+                google_api_key=self.api_key,
+                convert_system_message_to_human=True
             )
         except Exception as e:
-            print(f"Error initializing Gemini model: {str(e)}")
+            logger.error(f"Error initializing Gemini model: {str(e)}")
             raise
 
         # Set up conversation memory
@@ -47,34 +53,45 @@ class InsuranceChatbot:
             output_key="answer"
         )
 
-        # Create the QA template
-        qa_template = """
-        You are an expert insurance advisor chatbot. Your job is to provide accurate, helpful information 
-        about insurance policies including health, life, auto, and home insurance.
-
-        Use the following context to answer the user's question. If you don't know the answer, don't make up 
-        information - instead, suggest that the user should contact a human agent for more specific details.
-
-        Remember to be professional, friendly, and clear in your responses.
-
-        Context: {context}
-
-        Question: {question}
-
-        Chat History: {chat_history}
-
-        Answer:
+        # Create the system prompt template
+        system_template = """
+        You are InsuranceGPT, an expert insurance advisor chatbot designed to provide accurate, helpful, and professional insurance information. 
+        
+        RULES:
+        1. Only answer questions based on the information provided in the context
+        2. If the information isn't in the context, politely inform the user and suggest contacting a human agent
+        3. Never make up information or hallucinate facts about insurance
+        4. Be professional but conversational, using clear and simple language without insurance jargon
+        5. When explaining complex insurance terms, break them down simply
+        6. Provide concise, well-structured responses
+        
+        When users ask about specific policies or premiums, remind them that:
+        - The information provided is general and their actual policy details may vary
+        - For specific quotes or policy changes, they should contact an insurance representative
+        
+        CONTEXT INFORMATION:
+        {context}
+        
+        PREVIOUS CONVERSATION:
+        {chat_history}
+        
+        CURRENT QUESTION: {question}
+        
+        YOUR RESPONSE:
         """
 
         QA_PROMPT = PromptTemplate(
-            template=qa_template, 
+            template=system_template, 
             input_variables=["context", "question", "chat_history"]
         )
 
         # Set up the conversational retrieval chain
         self.chain = ConversationalRetrievalChain.from_llm(
             llm=self.llm,
-            retriever=self.knowledge_base.as_retriever(search_kwargs={"k": 4}),
+            retriever=self.knowledge_base.as_retriever(
+                search_kwargs={"k": 4},  # Retrieve 4 most relevant chunks
+                search_type="similarity"  # Use similarity search
+            ),
             memory=self.memory,
             combine_docs_chain_kwargs={"prompt": QA_PROMPT},
             return_source_documents=True,
@@ -100,34 +117,48 @@ class InsuranceChatbot:
                     "coverage, premiums, and claims. Could you please ask an insurance-related question?"
                 )
 
-            print(f"Processing query: {query}")
+            logger.info(f"Processing query: {query}")
 
             # Get response from the conversation chain
             result = self.chain({"question": query})
 
-            print(f"Got result: {result.keys()}")
+            logger.info(f"Got result: {result.keys()}")
+
+            # Get source documents for citation
+            source_docs = result.get('source_documents', [])
+            
+            # Format source information if available
+            source_info = ""
+            if source_docs:
+                source_names = set()
+                for doc in source_docs:
+                    if 'source' in doc.metadata:
+                        source_name = doc.metadata['source'].split('/')[-1]
+                        source_names.add(source_name)
+                
+                if source_names:
+                    source_info = "\n\n*Information sourced from: " + ", ".join(source_names) + "*"
 
             # Check if we need to escalate to a human agent
             if self._should_escalate(query, result['answer']):
                 return (
                     f"{result['answer']}\n\n"
                     "For this specific query, it might be better to speak with one of our human insurance agents. "
-                    "Would you like me to arrange for someone to contact you?"
+                    "Would you like me to arrange for someone to contact you?" + source_info
                 )
 
-            return result['answer']
+            return result['answer'] + source_info
 
         except Exception as e:
             # Detailed error logging for debugging
-            print(f"Error in get_response: {type(e).__name__}: {str(e)}")
+            logger.error(f"Error in get_response: {type(e).__name__}: {str(e)}")
             import traceback
-            print(traceback.format_exc())
+            logger.error(traceback.format_exc())
 
             # Fallback error handling with more specific information
             return (
                 f"I'm having trouble processing your request at the moment. "
                 f"This could be due to technical difficulties or the complexity of your query. "
-                f"Error type: {type(e).__name__}. "
                 f"Please try again or consider speaking with one of our human insurance agents for assistance."
             )
 
@@ -145,7 +176,9 @@ class InsuranceChatbot:
             "insurance", "policy", "premium", "coverage", "claim", "deductible",
             "health", "life", "auto", "car", "home", "property", "liability",
             "medical", "accident", "damage", "injury", "protection", "risk",
-            "benefit", "plan", "term", "whole life", "comprehensive", "collision"
+            "benefit", "plan", "term", "whole life", "comprehensive", "collision",
+            "policyholder", "insurer", "insured", "beneficiary", "underwriting", 
+            "copay", "coinsurance", "out-of-pocket", "preexisting", "coverage limit"
         ]
 
         query_lower = query.lower()
@@ -171,19 +204,23 @@ class InsuranceChatbot:
             "specific to your situation",
             "recommend speaking with an agent",
             "cannot calculate",
-            "varies depending on"
+            "varies depending on",
+            "I don't have specific information",
+            "I cannot access",
+            "not available in the provided context"
         ]
 
         # Check for specific complex topics
         complex_topics = [
             "lawsuit", "legal", "sue", "death", "dispute", "rejected claim",
             "denied", "appeal", "fraud", "investigation", "cancelation",
-            "specific quote", "exact premium", "exact rate", "specific to my case"
+            "specific quote", "exact premium", "exact rate", "specific to my case",
+            "personal information", "policy number", "payment information"
         ]
 
         # If the answer indicates uncertainty or the query is about complex topics
         query_lower = query.lower()
         return (
-            any(indicator in answer for indicator in complex_indicators) or
+            any(indicator.lower() in answer.lower() for indicator in complex_indicators) or
             any(topic in query_lower for topic in complex_topics)
         )

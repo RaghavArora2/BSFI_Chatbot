@@ -12,7 +12,7 @@ os.environ["GOOGLE_API_KEY"] = "AIzaSyAQW3JngAxn3DqbZQWzvIT3kb2w098qI9c"
 st.set_page_config(page_title="Insurance Advisor Chatbot",
                    page_icon="🛡️",
                    layout="wide",
-                   initial_sidebar_state="expanded")
+                   initial_sidebar_state="collapsed")  # Start with collapsed sidebar
 
 # Initialize session state variables
 if "chat_history" not in st.session_state:
@@ -25,6 +25,8 @@ if "chatbot" not in st.session_state:
     st.session_state.chatbot = None
 if "feedback_given" not in st.session_state:
     st.session_state.feedback_given = set()  # To track which messages have received feedback
+if "show_document_upload" not in st.session_state:
+    st.session_state.show_document_upload = False  # Flag to control document upload visibility
 
 # Check for Google API key
 api_key = os.getenv("GOOGLE_API_KEY")
@@ -48,93 +50,108 @@ else:
         st.error(f"Error initializing chatbot: {str(e)}")
 
 
-# Function to handle document upload and custom text input
+# Function to handle document upload
 def handle_document_upload():
-    # Add tabs for different input methods
-    tab1, tab2 = st.tabs(["Upload PDF", "Enter Custom Text"])
+    uploaded_file = st.file_uploader(
+        "Upload insurance policy document (PDF)", type="pdf")
 
-    with tab1:
-        uploaded_file = st.file_uploader(
-            "Upload insurance policy document (PDF)", type="pdf")
+    if uploaded_file is not None:
+        # Create a temporary file
+        with tempfile.NamedTemporaryFile(delete=False,
+                                         suffix='.pdf') as tmp_file:
+            # Write the uploaded file content to the temporary file
+            tmp_file.write(uploaded_file.getvalue())
+            tmp_path = tmp_file.name
 
-        if uploaded_file is not None:
-            # Create a temporary file
-            with tempfile.NamedTemporaryFile(delete=False,
-                                             suffix='.pdf') as tmp_file:
-                # Write the uploaded file content to the temporary file
-                tmp_file.write(uploaded_file.getvalue())
-                tmp_path = tmp_file.name
+        try:
+            # Create knowledge base from the uploaded document
+            kb = create_knowledge_base(custom_pdf_path=tmp_path)
+            document_name = uploaded_file.name
 
-            try:
-                # Create knowledge base from the uploaded document
-                kb = create_knowledge_base(custom_pdf_path=tmp_path)
-                document_name = uploaded_file.name
+            # Add to documents dictionary
+            st.session_state.documents[document_name] = tmp_path
+            st.session_state.active_document = document_name
 
-                # Add to documents dictionary
-                st.session_state.documents[document_name] = tmp_path
-                st.session_state.active_document = document_name
+            # Initialize chatbot with new knowledge base
+            st.session_state.chatbot = InsuranceChatbot(kb)
 
-                # Initialize chatbot with new knowledge base
-                st.session_state.chatbot = InsuranceChatbot(kb)
+            st.success(
+                f"Successfully uploaded and processed {document_name}")
+            # Clean the chat history when changing documents
+            st.session_state.chat_history = []
 
-                st.success(
-                    f"Successfully uploaded and processed {document_name}")
-                # Clean the chat history when changing documents
-                st.session_state.chat_history = []
-
-            except Exception as e:
-                st.error(f"Error processing the uploaded document: {str(e)}")
-            finally:
-                # Clean up the temporary file
-                import os
-                os.unlink(tmp_path)
-
-    with tab2:
-        st.write("Enter your insurance information text below:")
-        custom_text = st.text_area(
-            "Insurance Information",
-            height=300,
-            placeholder="Paste your insurance policy text here...")
-
-        if st.button("Process Custom Text"):
-            if custom_text.strip():
-                try:
-                    # Create knowledge base from the custom text
-                    kb = create_knowledge_base(custom_text=custom_text)
-                    document_name = "Custom Text Input"
-
-                    # Add to documents dictionary
-                    st.session_state.documents[document_name] = "custom_text"
-                    st.session_state.active_document = document_name
-
-                    # Initialize chatbot with new knowledge base
-                    st.session_state.chatbot = InsuranceChatbot(kb)
-
-                    st.success("Successfully processed custom text")
-                    # Clean the chat history when changing documents
-                    st.session_state.chat_history = []
-
-                except Exception as e:
-                    st.error(f"Error processing custom text: {str(e)}")
-            else:
-                st.warning("Please enter some text before processing.")
+        except Exception as e:
+            st.error(f"Error processing the uploaded document: {str(e)}")
+        finally:
+            # Clean up the temporary file
+            import os
+            os.unlink(tmp_path)
 
 
-# Apply custom styles for a more modern UI
+# Apply custom styles for a modern UI with animated borders
 st.markdown("""
 <style>
 /* Global Improvements */
 .stApp {
     max-width: 1200px;
     margin: 0 auto;
+    background-color: #f8f9fa;
+}
+
+/* Container for the entire chat area */
+.chat-container {
+    background-color: white;
+    border-radius: 20px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.06);
+    padding: 20px;
+    margin-bottom: 20px;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Add animated border effect */
+.chat-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 20px;
+    padding: 2px;
+    background: linear-gradient(
+        45deg,
+        rgba(65,105,225,0.4),
+        rgba(0,191,255,0.4),
+        rgba(65,105,225,0.4)
+    );
+    -webkit-mask: 
+        linear-gradient(#fff 0 0) content-box, 
+        linear-gradient(#fff 0 0);
+    -webkit-mask-composite: destination-out;
+    mask-composite: exclude;
+    animation: border-pulse 6s ease-in-out infinite;
+    z-index: 0;
+}
+
+@keyframes border-pulse {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
 }
 
 /* Button styling */
 .stButton button {
     background-color: #4169E1;
     color: white;
-    border-radius: 8px;
-    padding: 0.5rem 1rem;
+    border-radius: 12px;
+    padding: 0.6rem 1.2rem;
     font-weight: 500;
     border: none;
     transition: all 0.3s ease;
@@ -147,60 +164,127 @@ st.markdown("""
 }
 
 /* Input field styling */
-.stTextInput input, .stTextArea textarea {
-    border-radius: 8px;
-    border: 1px solid #ddd;
-    padding: 0.75rem;
+.stTextInput input {
+    border-radius: 12px;
+    border: 1px solid #e0e5eb;
+    padding: 1rem;
     transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
 }
-.stTextInput input:focus, .stTextArea textarea:focus {
+
+.stTextInput input:focus {
     border-color: #4169E1;
     box-shadow: 0 0 0 2px rgba(65,105,225,0.2);
 }
 
-/* Chat container styling */
-.chat-container {
-    border-radius: 12px;
-    margin-bottom: 1.5rem;
-    padding: 0.5rem;
+/* Message styling */
+.user-message {
+    background-color: #E9F0FF;
+    border-radius: 15px;
+    padding: 12px 16px;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    position: relative;
+    animation: fadeIn 0.3s ease-in-out;
 }
 
-/* Tabs styling */
-.stTabs [data-baseweb="tab-list"] {
-    gap: 2px;
+.assistant-message {
+    background-color: #FFFFFF;
+    border-radius: 15px;
+    padding: 12px 16px;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    border-left: 3px solid #4169E1;
+    position: relative;
+    animation: fadeIn 0.3s ease-in-out;
 }
-.stTabs [data-baseweb="tab"] {
-    border-radius: 8px 8px 0 0;
-    padding: 0.5rem 1rem;
-}
-.stTabs [aria-selected="true"] {
-    background-color: #4169E1;
-    color: white;
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* Sidebar improvements */
 .stSidebar {
+    background-color: #ffffff;
     padding-top: 2rem;
+    box-shadow: inset -1px 0 5px rgba(0,0,0,0.05);
+}
+
+/* Header styling */
+.main-header {
+    text-align: center;
+    color: #4169E1;
+    font-size: 2.2rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    position: relative;
+    display: inline-block;
+}
+
+.main-header::after {
+    content: '';
+    position: absolute;
+    width: 60%;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, #4169E1, transparent);
+    left: 20%;
+    bottom: -10px;
+    border-radius: 2px;
+}
+
+/* FAQ button styling */
+.faq-btn {
+    border-radius: 8px;
+    background-color: #f8f9fa;
+    border: 1px solid #e0e5eb;
+    padding: 12px;
+    transition: all 0.3s ease;
+    margin-bottom: 8px;
+    text-align: left;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.faq-btn:hover {
+    background-color: #EFF3FF;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+}
+
+/* Upload button styling */
+.upload-btn-container {
+    margin-top: 20px;
+    margin-bottom: 20px;
 }
 </style>
-""",
-            unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 
 # App header with improved styling
 st.markdown(
-    "<h1 style='text-align: center; margin-bottom: 1.5rem; color: #4169E1;'>🛡️ Insurance Advisor Chatbot</h1>",
+    "<h1 class='main-header'>🛡️ Insurance Advisor Chatbot</h1>",
     unsafe_allow_html=True)
 
 # Sidebar for document management
 with st.sidebar:
     st.header("Document Management")
-
-    # Document uploader
-    st.subheader("Upload Document")
-    handle_document_upload()
-
-    # Document switcher
-    if st.session_state.documents:
+    
+    # Toggle for showing/hiding document upload
+    if st.button("Upload Insurance Policy Document", key="toggle_upload"):
+        st.session_state.show_document_upload = not st.session_state.show_document_upload
+    
+    # Only show document upload if toggled on
+    if st.session_state.show_document_upload:
+        handle_document_upload()
+    
+    # Document switcher (only show if documents are available)
+    if st.session_state.documents and len(st.session_state.documents) > 1:
         st.subheader("Switch Document")
         selected_document = st.selectbox(
             "Select Document",
@@ -208,72 +292,81 @@ with st.sidebar:
             index=list(st.session_state.documents.keys()).index(
                 st.session_state.active_document)
             if st.session_state.active_document else 0)
-
+        
         if selected_document != st.session_state.active_document:
             if st.session_state.documents[selected_document] == "Default":
                 # Use default knowledge base
                 kb = create_knowledge_base()
-            elif st.session_state.documents[
-                    selected_document] == "custom_text":
-                # For previously saved custom text, we need to recreate from initial data
-                # Here we're using the health insurance text from the attached assets
-                with open(
-                        "attached_assets/Pasted--Health-Insurance-Policies-Basic-Health-Insurance-Our-Basic-Health-Insurance-plan-offers-cover-1745422656700.txt",
-                        "r") as f:
-                    insurance_text = f.read()
-                kb = create_knowledge_base(custom_text=insurance_text)
             else:
                 # Create knowledge base from the custom document
                 kb = create_knowledge_base(custom_pdf_path=st.session_state.
                                            documents[selected_document])
-
+            
             # Initialize chatbot with the selected knowledge base
             st.session_state.chatbot = InsuranceChatbot(kb)
             st.session_state.active_document = selected_document
-            st.session_state.chat_history = [
-            ]  # Reset chat history when switching documents
+            st.session_state.chat_history = []  # Reset chat history when switching documents
             st.rerun()
+    
+    # About section
+    st.markdown("---")
+    st.markdown("""
+    ### About this Chatbot
+    
+    This AI assistant helps you understand insurance policies by providing accurate information from insurance documents. The chatbot uses Google's Gemini model and LangChain to process and retrieve relevant information.
+    
+    **Features:**
+    - Answers questions about insurance policies
+    - References actual insurance policy documents
+    - Suggests human assistance when needed
+    """)
 
-# Main content area
-st.markdown("""
-    Welcome to the AI Insurance Assistant! Ask me questions about:
+# Main chat container
+st.markdown("<div class='chat-container'>", unsafe_allow_html=True)
+
+# Welcome message when no chat history
+if not st.session_state.chat_history:
+    st.markdown("""
+    ### Welcome to the Insurance Assistant!
+    
+    I can help you understand:
     - Health insurance policies
-    - Life insurance coverage
-    - Auto insurance details
-    - Home insurance options
-    - Premium calculations
+    - Life insurance plans
+    - Auto insurance coverage
+    - Home insurance details
+    - Policy terms and conditions
     - Claims processes
-""")
-
-# Show active document
-if st.session_state.active_document:
-    st.info(f"Currently using: {st.session_state.active_document}")
+    
+    Ask me any insurance-related question to get started!
+    """)
 
 # Display chat history with feedback buttons
 display_chat_history(st.session_state.chat_history)
+
+st.markdown("</div>", unsafe_allow_html=True)  # Close the chat container
 
 
 # Function to handle user message submission
 def submit():
     if "temp_input" in st.session_state and st.session_state.temp_input:
         user_message = st.session_state.temp_input
-
+        
         if st.session_state.chatbot is None:
             st.error(
                 "Chatbot is not initialized. Please check the error above.")
             return
-
+        
         # Add user message to chat history
         st.session_state.chat_history.append({
             "role": "user",
             "content": user_message
         })
-
+        
         with st.spinner("Thinking..."):
             try:
                 # Get response from chatbot
                 response = st.session_state.chatbot.get_response(user_message)
-
+                
                 # Add assistant message to chat history
                 st.session_state.chat_history.append({
                     "role": "assistant",
@@ -281,12 +374,10 @@ def submit():
                 })
             except Exception as e:
                 st.session_state.chat_history.append({
-                    "role":
-                    "assistant",
-                    "content":
-                    f"I'm having trouble answering that. Error: {str(e)}"
+                    "role": "assistant",
+                    "content": f"I'm having trouble answering that. Error: {str(e)}"
                 })
-
+        
         # Clear the input for next message
         st.session_state.temp_input = ""
 
@@ -296,15 +387,15 @@ def process_faq(question):
     if st.session_state.chatbot is None:
         st.error("Chatbot is not initialized. Please check the error above.")
         return
-
+    
     # Add user message to chat history
     st.session_state.chat_history.append({"role": "user", "content": question})
-
+    
     with st.spinner("Thinking..."):
         try:
             # Get response from chatbot
             response = st.session_state.chatbot.get_response(question)
-
+            
             # Add assistant message to chat history
             st.session_state.chat_history.append({
                 "role": "assistant",
@@ -312,38 +403,37 @@ def process_faq(question):
             })
         except Exception as e:
             st.session_state.chat_history.append({
-                "role":
-                "assistant",
-                "content":
-                f"I'm having trouble answering that. Error: {str(e)}"
+                "role": "assistant",
+                "content": f"I'm having trouble answering that. Error: {str(e)}"
             })
-
+    
     st.rerun()
 
 
-# Input area with FAQ section
+# Modern chat input area
 with st.container():
     # Initialize temp_input if it doesn't exist
     if "temp_input" not in st.session_state:
         st.session_state.temp_input = ""
-
-    # Text input that properly handles Enter key press
-    st.text_input("Type your insurance question here:",
+    
+    # Text input with improved styling
+    st.text_input("Type your insurance question here...",
                   key="temp_input",
-                  on_change=submit)
-
+                  on_change=submit,
+                  placeholder="Example: What does auto insurance typically cover?")
+    
     col1, col2 = st.columns([5, 1])
     with col1:
         if st.button("Send", use_container_width=True):
             submit()
-
+    
     with col2:
         if st.button("Clear", use_container_width=True):
             st.session_state.chat_history = []
             st.rerun()
-
-    # FAQ section near input
-    st.write("**Common Questions:**")
+    
+    # FAQ section with improved design
+    st.markdown("### Quick Questions")
     faq_questions = [
         "What are the eligibility criteria for life insurance?",
         "How do I file a health insurance claim?",
@@ -352,10 +442,10 @@ with st.container():
         "What is the difference between term and whole life insurance?",
         "How much coverage do I need for my car insurance?"
     ]
-
-    # Display FAQ questions in columns of 2
+    
+    # Display FAQ questions with better styling
     col1, col2 = st.columns(2)
-
+    
     for i, question in enumerate(faq_questions):
         if i % 2 == 0:
             with col1:
@@ -369,5 +459,5 @@ with st.container():
 # Footer
 st.markdown("---")
 st.markdown(
-    "*This chatbot uses AI to provide information about insurance policies. For complex inquiries, please contact our customer service.*"
+    "*This chatbot uses AI to provide information about insurance policies based on our knowledge base. For complex inquiries or specific policy details, please contact our customer service.*"
 )
