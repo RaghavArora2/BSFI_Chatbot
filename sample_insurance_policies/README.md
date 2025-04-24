@@ -1,18 +1,32 @@
-# Sample Insurance Policies Directory
+# Sample Insurance Policy Documents
 
-This directory contains sample insurance policy documents that are used as the knowledge base for the AI-powered insurance policy chatbot.
+This directory contains sample insurance policy documents used for demonstrating the chatbot functionality. These are simplified examples intended for educational purposes only and do not constitute actual insurance policies.
 
-## Files
+## Included Documents
 
-The following PDF files will be generated automatically by the application if they don't exist:
+1. **auto_insurance.pdf**: Sample auto insurance policy covering liability, collision, comprehensive coverage, etc.
+2. **health_insurance.pdf**: Sample health insurance policy covering medical services, prescriptions, etc.
+3. **home_insurance.pdf**: Sample home insurance policy covering dwelling, personal property, liability, etc.
+4. **life_insurance.pdf**: Sample life insurance policy covering term and whole life options.
 
-- `auto_insurance.pdf`: Contains information about auto insurance coverage, premiums, and claims process
-- `health_insurance.pdf`: Contains information about health insurance plans, coverage options, and enrollment
-- `home_insurance.pdf`: Contains information about home insurance coverage, premiums, and claims process
-- `life_insurance.pdf`: Contains information about life insurance policy types, premiums, and benefits
+## Using Your Own Documents
 
-## How It Works
+You can replace these sample documents with your own insurance policies by:
 
-When the application starts, it checks for the existence of these PDF files. If they don't exist, it automatically generates them using the built-in content template in the `document_processor.py` module.
+1. Uploading them through the UI
+2. Directly replacing these files with your own (using the same filenames)
+3. Adding new PDF files to this directory
 
-You can replace these sample files with actual insurance policy documents to customize the knowledge base according to your specific needs.
+For best results, ensure your documents contain clear, structured information about insurance policies.
+
+## Document Format
+
+The chatbot works best with documents that:
+
+1. Contain searchable text (not just scanned images)
+2. Have clear headings and structure
+3. Include detailed information about coverage, terms, and conditions
+
+## Privacy Note
+
+When using real insurance documents, be aware that they may contain sensitive personal information. Be cautious about sharing the repository or deploying the application with sensitive documents included.
