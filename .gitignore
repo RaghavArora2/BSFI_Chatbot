@@ -1,0 +1,48 @@
+# Environment variables
+.env
+
+# Virtual environment
+venv/
+env/
+ENV/
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Local user uploads
+uploads/
+
+# FAISS index files (large binary files)
+*.index
+
+# Temporary files
+tmp/
+temp/
+
+# The directory where uploaded or temporary PDFs are stored
+user_documents/
