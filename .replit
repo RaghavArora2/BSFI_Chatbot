@@ -18,10 +18,10 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Insurance Policy Chatbot"
+args = "Insurance Chatbot Server"
 
 [[workflows.workflow]]
-name = "Insurance Policy Chatbot"
+name = "Insurance Chatbot Server"
 author = "agent"
 
 [workflows.workflow.metadata]
