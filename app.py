@@ -5,7 +5,7 @@ from insurance_chatbot import InsuranceChatbot
 from knowledge_base import create_knowledge_base
 from utils import display_chat_history, give_feedback
 
-os.environ["GOOGLE_API_KEY"] = "AIzaSyAQW3JngAxn3DqbZQWzvIT3kb2w098qI9c"
+os.environ["GOOGLE_API_KEY"] = "AddApiHere"
 
 st.set_page_config(page_title="Insurance Advisor Chatbot",
                    page_icon="🛡️",
