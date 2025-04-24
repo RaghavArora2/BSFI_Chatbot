@@ -656,16 +656,27 @@ with st.container():
     ]
     
     # Display FAQ questions with better styling
+    # Create a unique session ID to avoid duplicate keys
+    if "faq_session_id" not in st.session_state:
+        import random
+        st.session_state.faq_session_id = random.randint(10000, 99999)
+    
+    # Use the session ID to make keys unique between reruns
+    session_id = st.session_state.faq_session_id
+    
     col1, col2 = st.columns(2)
     
     for i, question in enumerate(faq_questions):
+        # Set maintain position flag for smooth scrolling
         if i % 2 == 0:
             with col1:
-                if st.button(question, key=f"faq_{i}"):
+                if st.button(question, key=f"faq_{i}_{session_id}"):
+                    st.session_state.maintain_position = True
                     process_faq(question)
         else:
             with col2:
-                if st.button(question, key=f"faq_{i}"):
+                if st.button(question, key=f"faq_{i}_{session_id}"):
+                    st.session_state.maintain_position = True
                     process_faq(question)
 
 # Footer

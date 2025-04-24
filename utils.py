@@ -95,11 +95,15 @@ def display_chat_history(chat_history: List[Dict[str, Any]]):
                         with feedback_container:
                             col1, col2, col3 = st.columns([1, 1, 10])
                             with col1:
-                                if st.button("👍", key=f"thumbs_up_{idx}"):
+                                # Add unique identifier for each message instance
+                                button_key = f"thumbs_up_{idx}_{id(message)}"
+                                if st.button("👍", key=button_key):
                                     give_feedback(idx, "positive")
                                     return True  # Signal to app.py to rerun
                             with col2:
-                                if st.button("👎", key=f"thumbs_down_{idx}"):
+                                # Add unique identifier for each message instance
+                                button_key = f"thumbs_down_{idx}_{id(message)}"
+                                if st.button("👎", key=button_key):
                                     give_feedback(idx, "negative")
                                     return True  # Signal to app.py to rerun
                             with col3:

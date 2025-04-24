@@ -15,4 +15,5 @@ dependencies = [
     "langchain-community>=0.3.22",
     "anthropic>=0.50.0",
     "reportlab>=4.4.0",
+    "langchain-core>=0.3.55",
 ]
