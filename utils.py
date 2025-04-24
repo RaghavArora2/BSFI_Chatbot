@@ -3,23 +3,13 @@ from typing import List, Dict, Any
 
 def display_chat_history(chat_history: List[Dict[str, Any]]):
     """
-    Display the chat history in a visually appealing format with feedback buttons.
+    Display the chat history in a visually appealing format.
 
     Args:
         chat_history: List of message dictionaries with 'role' and 'content' keys
     """
     if not chat_history:
         return
-    
-    # Display any pending feedback messages
-    if "feedback_message" in st.session_state:
-        msg = st.session_state.feedback_message
-        if msg["type"] == "success":
-            st.success(msg["text"])
-        else:
-            st.info(msg["text"])
-        # Clear the message after displaying
-        st.session_state.feedback_message = None
     
     # Create containers for chat messages
     chat_container = st.container()
@@ -84,30 +74,6 @@ def display_chat_history(chat_history: List[Dict[str, Any]]):
                     else:
                         # Regular display for already shown messages
                         st.markdown(f"""<div class="assistant-message">{content}</div>""", unsafe_allow_html=True)
-                    
-                    # Add feedback buttons for assistant messages
-                    # Only add buttons for messages that haven't received feedback
-                    if "feedback_given" not in st.session_state:
-                        st.session_state.feedback_given = set()
-                        
-                    if idx not in st.session_state.feedback_given:
-                        feedback_container = st.container()
-                        with feedback_container:
-                            col1, col2, col3 = st.columns([1, 1, 10])
-                            with col1:
-                                # Add unique identifier for each message instance
-                                button_key = f"thumbs_up_{idx}_{id(message)}"
-                                if st.button("👍", key=button_key):
-                                    give_feedback(idx, "positive")
-                                    return True  # Signal to app.py to rerun
-                            with col2:
-                                # Add unique identifier for each message instance
-                                button_key = f"thumbs_down_{idx}_{id(message)}"
-                                if st.button("👎", key=button_key):
-                                    give_feedback(idx, "negative")
-                                    return True  # Signal to app.py to rerun
-                            with col3:
-                                st.markdown("<span style='color:#777; font-size:0.8rem;'>Was this response helpful?</span>", unsafe_allow_html=True)
     
     return False  # No rerun needed
 

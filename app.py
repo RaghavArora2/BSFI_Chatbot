@@ -598,13 +598,8 @@ st.markdown("""
 </script>
 """, unsafe_allow_html=True)
 
-# Check if we need to rerun based on feedback
-if "displayed_messages" in st.session_state:
-    need_rerun = display_chat_history(st.session_state.chat_history)
-    if need_rerun:
-        st.rerun()
-else:
-    display_chat_history(st.session_state.chat_history)
+# Display chat history - simplified version without feedback
+display_chat_history(st.session_state.chat_history)
 
 # Modern chat input area with double-send prevention
 with st.container():
